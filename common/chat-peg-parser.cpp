@@ -338,7 +338,7 @@ void common_chat_peg_mapper::map(const common_peg_ast_node & node) {
     }
 
     if ((is_arg_value || is_arg_string_value) && current_tool) {
-        std::string value_content = std::string(trim_trailing_space(trim_leading_space(node.text, 1), 1));
+        std::string value_content = std::string(node.text);
 
         std::string value_to_add;
         if (value_content.empty() && is_arg_string_value) {
@@ -363,13 +363,12 @@ void common_chat_peg_mapper::map(const common_peg_ast_node & node) {
             try {
                 ordered_json parsed = ordered_json::parse(value_content);
                 if (parsed.is_string()) {
-                    // Don't add closing quote yet (added by arg_close) for monotonic streaming
-                    std::string escaped = parsed.dump();
-                    if (!escaped.empty() && escaped.back() == '"') {
-                        escaped.pop_back();
-                    }
-                    value_to_add          = escaped;
-                    closing_quote_pending = true;
+                    // Possible fix for tool-calling issue when using the "Edit" tool
+                    // while hosted in claude code:
+                    // Use the raw text from the node to preserve whitespace/formatting
+                    // instead of re-serializing via parsed.dump().
+                    value_to_add          = value_content;
+                    closing_quote_pending = false;
                 } else {
                     // Non-string values: use raw content to preserve whitespace for monotonicity
                     value_to_add = value_content;
